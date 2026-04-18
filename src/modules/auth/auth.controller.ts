@@ -1,10 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
-import catchAsync from '../utils/catchAsync.ts';
-import response from '../utils/response.ts';
-import { verifyUserCredential } from '../services/user.service.ts';
-import ApiError from '../utils/ApiError.ts';
-import { generateAccessTokenHelper, generateRefreshTokenHelper, verifyRefreshTokenHelper } from '../utils/token.ts';
-import { addRefreshToken, deleteRefreshToken, verifyAndRefreshToken } from '../services/auth.service.ts';
+import catchAsync from '../../utils/catchAsync.ts';
+import response from '../../utils/response.ts';
+import { verifyUserCredential } from '../user/user.service.ts';
+import ApiError from '../../utils/ApiError.ts';
+import { generateAccessTokenHelper, generateRefreshTokenHelper, verifyRefreshTokenHelper } from '../../utils/token.ts';
+import { addRefreshToken, deleteRefreshToken, verifyAndRefreshToken } from './auth.service.ts';
 
 export const loginHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
   const { email, password } = req.body;
@@ -12,7 +12,7 @@ export const loginHandler = catchAsync(async (req: Request, res: Response, next:
   const userId = await verifyUserCredential({ email, password });
 
   if (!userId) {
-    return next(ApiError.unauthorized('Invalid credentials'));
+    return next(ApiError.unauthorized('Kredensial yang Anda berikan salah'));
   }
 
   const accessToken = generateAccessTokenHelper({ id: userId });
@@ -20,7 +20,7 @@ export const loginHandler = catchAsync(async (req: Request, res: Response, next:
 
   await addRefreshToken({ userId, refreshToken });
 
-  return response(res, 200, 'Login successful', {
+  return response(res, 201, 'Authentication berhasil ditambahkan', {
     accessToken,
     refreshToken
   });
@@ -42,13 +42,13 @@ export const refreshTokenHandler = catchAsync(
 
     const payload = verifyRefreshTokenHelper(refreshToken);
 
-    if (payload.id !== storedToken.user_id) {
-      return next(ApiError.badRequest('Invalid refresh token'));
+    if (payload.id !== storedToken.userId) {
+      return next(ApiError.badRequest('Refresh token tidak valid'));
     }
 
     const newAccessToken = generateAccessTokenHelper({ id: payload.id });
 
-    return response(res, 200, 'Token refreshed successfully', {
+    return response(res, 200, 'Access Token hasil diperbarui', {
       accessToken: newAccessToken,
     });
   }
@@ -65,11 +65,11 @@ export const logoutHandler = catchAsync(
     const storedToken = await verifyAndRefreshToken({ refreshToken });
 
     if (!storedToken) {
-      return next(ApiError.badRequest('Invalid or expired refresh token'));
+      return next(ApiError.badRequest('Refresh token tidak valid atau kadaluarsa'));
     }
 
     await deleteRefreshToken({ refreshToken });
 
-    return response(res, 200, 'Logout successful', null);
+    return response(res, 200, 'Logout berhasil', null);
   }
 );

@@ -1,6 +1,6 @@
 import env from './config/env.ts';
 import app from './app.ts';
-import pool from './config/database.ts';
+import { pool } from './db/client.ts';
 
 const start = async () => {
   try {

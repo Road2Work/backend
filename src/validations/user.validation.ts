@@ -11,19 +11,28 @@ export const registerSchema = Joi.object({
     'string.min': 'Password must be at least 6 characters',
     'any.required': 'Password is required',
   }),
-  name: Joi.string().trim().required().messages({
-    'string.empty': 'Name is required',
-    'any.required': 'Name is required',
+  fullname: Joi.string().trim().required().messages({
+    'string.empty': 'Fullname is required',
+    'any.required': 'Fullname is required',
   }),
-  role: Joi.string().trim().required().messages({
-    'string.empty': 'Role is required',
-    'any.required': 'Role is required',
+});
+
+export const updateProfileSchema = Joi.object({
+  fullname: Joi.string().trim().optional().messages({
+    'string.empty': 'Fullname cannot be empty',
+  }),
+  email: Joi.string().email().trim().optional().messages({
+    'string.email': 'Email must be a valid email',
   }),
 });
 
 export interface RegisterInput {
   email: string;
   password: string;
-  name: string;
-  role: string;
+  fullname: string;
+}
+
+export interface UpdateProfileInput {
+  fullname?: string;
+  email?: string;
 }

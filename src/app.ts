@@ -8,7 +8,7 @@ const app = express();
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/', routes);
+app.use('/api', routes);
 
 app.use((_req, res) => {
   res.status(404).json({

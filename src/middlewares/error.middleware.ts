@@ -10,10 +10,12 @@ const errorHandler = (
 ) => {
   if (err instanceof ApiError) {
     return res.status(err.statusCode).json({
-      code: err.statusCode,
-      status: 'failed',
+      success: false,
       message: err.message,
-      data: null,
+      error: {
+        code: err.errorCode || 'UNKNOWN_ERROR',
+        details: null,
+      },
     });
   }
 
@@ -26,10 +28,12 @@ const errorHandler = (
       : err.message || 'Internal Server Error';
 
   return res.status(statusCode).json({
-    code: statusCode,
-    status: 'failed',
+    success: false,
     message,
-    data: null,
+    error: {
+      code: 'INTERNAL_SERVER_ERROR',
+      details: null,
+    },
   });
 };
 

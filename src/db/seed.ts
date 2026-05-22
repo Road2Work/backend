@@ -3,11 +3,11 @@ import { nanoid } from 'nanoid';
 import { pool } from './client.ts';
 import { db } from './index.ts';
 import { jobRoles } from './schema/job_roles.ts';
-import { interviewStages } from './schema/interview_stages.ts';
+import { roleSkills } from './schema/role_skills.ts';
 
 /**
- * Seed script for InterviewIQ.
- * Populates job_roles and interview_stages with initial data.
+ * Seed script for Road2Work.id.
+ * Populates job_roles and role_skills with initial data matching the API Contract.
  *
  * Run with: npm run db:seed
  */
@@ -16,208 +16,240 @@ const seed = async () => {
 
   try {
     // ==========================================
-    // Job Role 1: Software Engineering
+    // Role Family: Data & AI
     // ==========================================
-    const seId = nanoid(16);
-    await db.insert(jobRoles).values({
-      id: seId,
-      name: 'Software Engineering',
-      description:
-        'Simulasi wawancara untuk posisi Software Engineer. Mencakup tahap HRD, Technical Interview, User Interview, dan Final/Offer.',
-      icon: 'code',
-      isActive: true,
-    });
 
-    const seStages = [
-      {
-        id: nanoid(16),
-        jobRoleId: seId,
-        stepOrder: 1,
-        name: 'HRD Interview',
-        type: 'behavioral',
-        focusArea: 'Motivasi, kepribadian, ekspektasi gaji, culture fit, STAR method',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: seId,
-        stepOrder: 2,
-        name: 'Technical Interview',
-        type: 'technical',
-        focusArea: 'Data Structures & Algorithms, system design, coding logic, problem solving',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: seId,
-        stepOrder: 3,
-        name: 'User Interview',
-        type: 'domain',
-        focusArea: 'Kolaborasi tim, product sense, pengalaman kerja nyata, studi kasus',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: seId,
-        stepOrder: 4,
-        name: 'Final / Offer',
-        type: 'negotiation',
-        focusArea: 'Negosiasi gaji, ekspektasi kerja, pertanyaan ke perusahaan, closing',
-      },
-    ];
-
-    await db.insert(interviewStages).values(seStages);
-    console.log(`✅ Software Engineering — ${seStages.length} stages`);
-
-    // ==========================================
-    // Job Role 2: Data Analyst / Scientist
-    // ==========================================
-    const daId = nanoid(16);
+    // Data Analyst
+    const daId = 'role_data_analyst';
     await db.insert(jobRoles).values({
       id: daId,
-      name: 'Data Analyst',
-      description:
-        'Simulasi wawancara untuk posisi Data Analyst / Data Scientist. Mencakup tahap HRD, Technical (SQL/Python), Case Study, dan User Interview.',
+      roleFamily: 'Data & AI',
+      roleName: 'Data Analyst',
+      description: 'Analyze data, build dashboards, and communicate insights.',
       icon: 'bar-chart',
       isActive: true,
-    });
+    }).onConflictDoNothing();
 
-    const daStages = [
-      {
-        id: nanoid(16),
-        jobRoleId: daId,
-        stepOrder: 1,
-        name: 'HRD Interview',
-        type: 'behavioral',
-        focusArea: 'Motivasi, kepribadian, ekspektasi gaji, culture fit, STAR method',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: daId,
-        stepOrder: 2,
-        name: 'Technical Interview',
-        type: 'technical',
-        focusArea: 'SQL query, Python scripting, statistik dasar, data wrangling',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: daId,
-        stepOrder: 3,
-        name: 'Case Study',
-        type: 'domain',
-        focusArea: 'Analisis data nyata, presentasi insight, business recommendation',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: daId,
-        stepOrder: 4,
-        name: 'User Interview',
-        type: 'domain',
-        focusArea: 'Kolaborasi dengan stakeholder, komunikasi hasil analisis, prioritisasi',
-      },
+    const daSkills = [
+      { skillName: 'SQL', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Excel', skillType: 'tool', importanceLevel: 4 },
+      { skillName: 'Data Visualization', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Python', skillType: 'tool', importanceLevel: 4 },
+      { skillName: 'Statistical Analysis', skillType: 'core', importanceLevel: 4 },
+      { skillName: 'Tableau', skillType: 'tool', importanceLevel: 3 },
+      { skillName: 'Communication', skillType: 'soft', importanceLevel: 4 },
     ];
 
-    await db.insert(interviewStages).values(daStages);
-    console.log(`✅ Data Analyst — ${daStages.length} stages`);
+    for (const skill of daSkills) {
+      await db.insert(roleSkills).values({
+        id: nanoid(16),
+        roleId: daId,
+        ...skill,
+      }).onConflictDoNothing();
+    }
+    console.log(`✅ Data Analyst — ${daSkills.length} skills`);
+
+    // Data Scientist
+    const dsId = 'role_data_scientist';
+    await db.insert(jobRoles).values({
+      id: dsId,
+      roleFamily: 'Data & AI',
+      roleName: 'Data Scientist',
+      description: 'Build models, run experiments, and generate business insights.',
+      icon: 'brain',
+      isActive: true,
+    }).onConflictDoNothing();
+
+    const dsSkills = [
+      { skillName: 'Python', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Machine Learning', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Statistics', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'SQL', skillType: 'tool', importanceLevel: 4 },
+      { skillName: 'TensorFlow/PyTorch', skillType: 'tool', importanceLevel: 4 },
+      { skillName: 'Data Wrangling', skillType: 'core', importanceLevel: 4 },
+    ];
+
+    for (const skill of dsSkills) {
+      await db.insert(roleSkills).values({
+        id: nanoid(16),
+        roleId: dsId,
+        ...skill,
+      }).onConflictDoNothing();
+    }
+    console.log(`✅ Data Scientist — ${dsSkills.length} skills`);
+
+    // AI Engineer
+    const aeId = 'role_ai_engineer';
+    await db.insert(jobRoles).values({
+      id: aeId,
+      roleFamily: 'Data & AI',
+      roleName: 'AI Engineer',
+      description: 'Build AI-powered applications and model pipelines.',
+      icon: 'cpu',
+      isActive: true,
+    }).onConflictDoNothing();
+
+    const aeSkills = [
+      { skillName: 'Python', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Deep Learning', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'MLOps', skillType: 'core', importanceLevel: 4 },
+      { skillName: 'Cloud Services', skillType: 'tool', importanceLevel: 4 },
+      { skillName: 'API Development', skillType: 'core', importanceLevel: 4 },
+    ];
+
+    for (const skill of aeSkills) {
+      await db.insert(roleSkills).values({
+        id: nanoid(16),
+        roleId: aeId,
+        ...skill,
+      }).onConflictDoNothing();
+    }
+    console.log(`✅ AI Engineer — ${aeSkills.length} skills`);
+
+    // ML Engineer
+    const mleId = 'role_ml_engineer';
+    await db.insert(jobRoles).values({
+      id: mleId,
+      roleFamily: 'Data & AI',
+      roleName: 'ML Engineer',
+      description: 'Train, deploy, and monitor machine learning models.',
+      icon: 'settings',
+      isActive: true,
+    }).onConflictDoNothing();
+
+    const mleSkills = [
+      { skillName: 'Python', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Machine Learning', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Docker', skillType: 'tool', importanceLevel: 4 },
+      { skillName: 'Kubernetes', skillType: 'tool', importanceLevel: 3 },
+      { skillName: 'Model Monitoring', skillType: 'core', importanceLevel: 4 },
+    ];
+
+    for (const skill of mleSkills) {
+      await db.insert(roleSkills).values({
+        id: nanoid(16),
+        roleId: mleId,
+        ...skill,
+      }).onConflictDoNothing();
+    }
+    console.log(`✅ ML Engineer — ${mleSkills.length} skills`);
 
     // ==========================================
-    // Job Role 3: Product Manager
+    // Role Family: Software Engineering
     // ==========================================
-    const pmId = nanoid(16);
+
+    const beId = 'role_backend_developer';
+    await db.insert(jobRoles).values({
+      id: beId,
+      roleFamily: 'Software Engineering',
+      roleName: 'Backend Developer',
+      description: 'Build APIs, databases, authentication, and backend systems.',
+      icon: 'server',
+      isActive: true,
+    }).onConflictDoNothing();
+
+    const beSkills = [
+      { skillName: 'Node.js', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'SQL', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'REST API Design', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Git', skillType: 'tool', importanceLevel: 4 },
+      { skillName: 'Docker', skillType: 'tool', importanceLevel: 3 },
+      { skillName: 'System Design', skillType: 'core', importanceLevel: 4 },
+    ];
+
+    for (const skill of beSkills) {
+      await db.insert(roleSkills).values({
+        id: nanoid(16),
+        roleId: beId,
+        ...skill,
+      }).onConflictDoNothing();
+    }
+    console.log(`✅ Backend Developer — ${beSkills.length} skills`);
+
+    const feId = 'role_frontend_developer';
+    await db.insert(jobRoles).values({
+      id: feId,
+      roleFamily: 'Software Engineering',
+      roleName: 'Frontend Developer',
+      description: 'Build responsive user interfaces and web applications.',
+      icon: 'layout',
+      isActive: true,
+    }).onConflictDoNothing();
+
+    const feSkills = [
+      { skillName: 'JavaScript/TypeScript', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'React/Next.js', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'CSS/Tailwind', skillType: 'core', importanceLevel: 4 },
+      { skillName: 'Git', skillType: 'tool', importanceLevel: 4 },
+      { skillName: 'Responsive Design', skillType: 'core', importanceLevel: 4 },
+    ];
+
+    for (const skill of feSkills) {
+      await db.insert(roleSkills).values({
+        id: nanoid(16),
+        roleId: feId,
+        ...skill,
+      }).onConflictDoNothing();
+    }
+    console.log(`✅ Frontend Developer — ${feSkills.length} skills`);
+
+    // ==========================================
+    // Role Family: Product & Design
+    // ==========================================
+
+    const pmId = 'role_product_manager';
     await db.insert(jobRoles).values({
       id: pmId,
-      name: 'Product Manager',
-      description:
-        'Simulasi wawancara untuk posisi Product Manager. Mencakup tahap HRD, Product Case, User Interview, dan Final.',
+      roleFamily: 'Product & Design',
+      roleName: 'Product Manager',
+      description: 'Define product strategy, prioritize features, and drive execution.',
       icon: 'lightbulb',
       isActive: true,
-    });
+    }).onConflictDoNothing();
 
-    const pmStages = [
-      {
-        id: nanoid(16),
-        jobRoleId: pmId,
-        stepOrder: 1,
-        name: 'HRD Interview',
-        type: 'behavioral',
-        focusArea: 'Motivasi, kepribadian, culture fit, STAR method',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: pmId,
-        stepOrder: 2,
-        name: 'Product Case',
-        type: 'domain',
-        focusArea: 'Product sense, prioritization framework, metrics definition, user empathy',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: pmId,
-        stepOrder: 3,
-        name: 'User Interview',
-        type: 'domain',
-        focusArea: 'Stakeholder management, roadmap planning, cross-functional collaboration',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: pmId,
-        stepOrder: 4,
-        name: 'Final / Offer',
-        type: 'negotiation',
-        focusArea: 'Negosiasi, ekspektasi, pertanyaan ke perusahaan',
-      },
+    const pmSkills = [
+      { skillName: 'Product Strategy', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'User Research', skillType: 'core', importanceLevel: 4 },
+      { skillName: 'Agile/Scrum', skillType: 'domain', importanceLevel: 4 },
+      { skillName: 'Data-Driven Decision Making', skillType: 'core', importanceLevel: 4 },
+      { skillName: 'Stakeholder Management', skillType: 'soft', importanceLevel: 5 },
     ];
 
-    await db.insert(interviewStages).values(pmStages);
-    console.log(`✅ Product Manager — ${pmStages.length} stages`);
+    for (const skill of pmSkills) {
+      await db.insert(roleSkills).values({
+        id: nanoid(16),
+        roleId: pmId,
+        ...skill,
+      }).onConflictDoNothing();
+    }
+    console.log(`✅ Product Manager — ${pmSkills.length} skills`);
 
-    // ==========================================
-    // Job Role 4: UI/UX Designer
-    // ==========================================
-    const uxId = nanoid(16);
+    const uxId = 'role_uiux_designer';
     await db.insert(jobRoles).values({
       id: uxId,
-      name: 'UI/UX Designer',
-      description:
-        'Simulasi wawancara untuk posisi UI/UX Designer. Mencakup tahap HRD, Portfolio Review, Design Challenge, dan User Interview.',
+      roleFamily: 'Product & Design',
+      roleName: 'UI/UX Designer',
+      description: 'Design user interfaces and experiences through research and prototyping.',
       icon: 'palette',
       isActive: true,
-    });
+    }).onConflictDoNothing();
 
-    const uxStages = [
-      {
-        id: nanoid(16),
-        jobRoleId: uxId,
-        stepOrder: 1,
-        name: 'HRD Interview',
-        type: 'behavioral',
-        focusArea: 'Motivasi, kepribadian, culture fit',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: uxId,
-        stepOrder: 2,
-        name: 'Portfolio Review',
-        type: 'domain',
-        focusArea: 'Presentasi portfolio, design process, design thinking, user research',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: uxId,
-        stepOrder: 3,
-        name: 'Design Challenge',
-        type: 'technical',
-        focusArea: 'Live design exercise, wireframing, prototyping, design rationale',
-      },
-      {
-        id: nanoid(16),
-        jobRoleId: uxId,
-        stepOrder: 4,
-        name: 'User Interview',
-        type: 'domain',
-        focusArea: 'Kolaborasi dengan engineer, handling feedback, iteration',
-      },
+    const uxSkills = [
+      { skillName: 'Figma', skillType: 'tool', importanceLevel: 5 },
+      { skillName: 'User Research', skillType: 'core', importanceLevel: 5 },
+      { skillName: 'Wireframing', skillType: 'core', importanceLevel: 4 },
+      { skillName: 'Prototyping', skillType: 'core', importanceLevel: 4 },
+      { skillName: 'Design Systems', skillType: 'core', importanceLevel: 4 },
     ];
 
-    await db.insert(interviewStages).values(uxStages);
-    console.log(`✅ UI/UX Designer — ${uxStages.length} stages`);
+    for (const skill of uxSkills) {
+      await db.insert(roleSkills).values({
+        id: nanoid(16),
+        roleId: uxId,
+        ...skill,
+      }).onConflictDoNothing();
+    }
+    console.log(`✅ UI/UX Designer — ${uxSkills.length} skills`);
 
     console.log('\n🎉 Seeding completed successfully!');
   } catch (error) {

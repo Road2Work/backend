@@ -8,14 +8,16 @@ const app = express();
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api', routes);
+app.use('/api/v1', routes);
 
 app.use((_req, res) => {
   res.status(404).json({
-    code: 404,
-    status: 'failed',
+    success: false,
     message: 'Route not found',
-    data: null,
+    error: {
+      code: 'ROUTE_NOT_FOUND',
+      details: null,
+    },
   });
 });
 

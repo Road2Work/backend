@@ -1,13 +1,15 @@
-import { pgTable, varchar, decimal, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, integer, timestamp } from 'drizzle-orm/pg-core';
 
 export const interviewSessions = pgTable('interview_sessions', {
   id: varchar('id', { length: 50 }).primaryKey(),
-  userInterviewId: varchar('user_interview_id', { length: 50 }).notNull(),
-  stageId: varchar('stage_id', { length: 50 }).notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, in_progress, completed
-  aiAssessment: jsonb('ai_assessment'), // AI evaluation result
-  transcript: jsonb('transcript'), // Conversation log between AI and user
-  score: decimal('score', { precision: 5, scale: 2 }),
-  startedAt: timestamp('started_at', { withTimezone: false }),
+  userId: varchar('user_id', { length: 50 }).notNull(),
+  profileId: varchar('profile_id', { length: 50 }).notNull(),
+  roleId: varchar('role_id', { length: 50 }).notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('active'), // 'active' | 'completed' | 'cancelled'
+  questionIndex: integer('question_index').notNull().default(0),
+  totalMainQuestions: integer('total_main_questions').notNull().default(5),
+  clarificationCount: integer('clarification_count').notNull().default(0),
+  currentHrdState: varchar('current_hrd_state', { length: 20 }).notNull().default('idle'), // idle, asking, listening, thinking, clarifying, completed
+  createdAt: timestamp('created_at', { withTimezone: false }).defaultNow().notNull(),
   completedAt: timestamp('completed_at', { withTimezone: false }),
 });

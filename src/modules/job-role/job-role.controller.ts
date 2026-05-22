@@ -4,9 +4,10 @@ import response from '../../utils/response.ts';
 import ApiError from '../../utils/ApiError.ts';
 import { getAllJobRoles, getJobRoleById } from './job-role.service.ts';
 
-export const listJobRolesHandler = catchAsync(async (_req: Request, res: Response, _next: NextFunction) => {
-  const roles = await getAllJobRoles();
-  return response(res, 200, 'Job roles fetched successfully', roles);
+export const listJobRolesHandler = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
+  const roleFamily = req.query.roleFamily as string | undefined;
+  const roles = await getAllJobRoles(roleFamily);
+  return response(res, 200, 'Roles fetched successfully', roles);
 });
 
 export const getJobRoleDetailHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
@@ -14,8 +15,8 @@ export const getJobRoleDetailHandler = catchAsync(async (req: Request, res: Resp
   const role = await getJobRoleById(id);
 
   if (!role) {
-    return next(ApiError.notFound('Job role not found'));
+    return next(ApiError.notFound('Role not found', 'ROLE_NOT_FOUND'));
   }
 
-  return response(res, 200, 'Job role detail fetched successfully', role);
+  return response(res, 200, 'Role detail fetched successfully', role);
 });

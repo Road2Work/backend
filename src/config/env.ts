@@ -16,6 +16,8 @@ const envSchema = Joi.object({
     REFRESH_TOKEN_KEY: Joi.string().required(),
     ACCESS_TOKEN_AGE: Joi.number().default(180),
     REFRESH_TOKEN_AGE: Joi.number().default(10080),
+
+    ML_SERVICE_URL: Joi.string().default('http://localhost:8000'),
 }).unknown(true);
 
 const { error, value } = envSchema.validate(process.env);
@@ -39,6 +41,7 @@ const env = value as {
     REFRESH_TOKEN_KEY: string;
     ACCESS_TOKEN_AGE: number;
     REFRESH_TOKEN_AGE: number;
+    ML_SERVICE_URL: string;
 };
 
 export default env;

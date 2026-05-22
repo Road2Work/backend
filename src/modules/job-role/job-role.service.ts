@@ -1,21 +1,44 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { jobRoles } from '../../db/schema/job_roles.ts';
-import { interviewStages } from '../../db/schema/interview_stages.ts';
+import { roleSkills } from '../../db/schema/role_skills.ts';
 
-export const getAllJobRoles = async () => {
-  const roles = await db
+export const getAllJobRoles = async (roleFamilyFilter?: string) => {
+  let query = db
     .select({
       id: jobRoles.id,
-      name: jobRoles.name,
+      roleFamily: jobRoles.roleFamily,
+      roleName: jobRoles.roleName,
       description: jobRoles.description,
-      icon: jobRoles.icon,
     })
     .from(jobRoles)
     .where(eq(jobRoles.isActive, true))
-    .orderBy(jobRoles.name);
+    .orderBy(jobRoles.roleFamily, jobRoles.roleName);
 
-  return roles;
+  const roles = await query;
+
+  const familyMap = new Map<string, Array<{
+    id: string;
+    roleFamily: string;
+    roleName: string;
+    description: string | null;
+  }>>();
+
+  for (const role of roles) {
+    if (roleFamilyFilter && role.roleFamily !== roleFamilyFilter) continue;
+
+    if (!familyMap.has(role.roleFamily)) {
+      familyMap.set(role.roleFamily, []);
+    }
+    familyMap.get(role.roleFamily)!.push(role);
+  }
+
+  const roleFamilies = Array.from(familyMap.entries()).map(([name, familyRoles]) => ({
+    name,
+    roles: familyRoles,
+  }));
+
+  return { roleFamilies };
 };
 
 export const getJobRoleById = async (id: string) => {
@@ -27,17 +50,24 @@ export const getJobRoleById = async (id: string) => {
 
   if (!role) return null;
 
-  const stages = await db
+  const skills = await db
     .select({
-      id: interviewStages.id,
-      stepOrder: interviewStages.stepOrder,
-      name: interviewStages.name,
-      type: interviewStages.type,
-      focusArea: interviewStages.focusArea,
+      id: roleSkills.id,
+      skillName: roleSkills.skillName,
+      skillType: roleSkills.skillType,
+      importanceLevel: roleSkills.importanceLevel,
     })
-    .from(interviewStages)
-    .where(eq(interviewStages.jobRoleId, id))
-    .orderBy(interviewStages.stepOrder);
+    .from(roleSkills)
+    .where(eq(roleSkills.roleId, id))
+    .orderBy(roleSkills.importanceLevel);
 
-  return { ...role, stages };
+  return {
+    role: {
+      id: role.id,
+      roleFamily: role.roleFamily,
+      roleName: role.roleName,
+      description: role.description,
+      skills,
+    },
+  };
 };

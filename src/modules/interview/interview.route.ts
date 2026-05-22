@@ -1,27 +1,67 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
 import * as interviewController from './interview.controller.ts';
 import validate from '../../middlewares/validate.middleware.ts';
 import authenticate from '../../middlewares/auth.middleware.ts';
 import {
-  startInterviewSchema,
-  interviewIdParamSchema,
-  sessionParamSchema,
-  submitSessionSchema,
+  createSessionSchema,
+  sessionIdParamSchema,
 } from '../../validations/interview.validation.ts';
+
+const audioStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, path.resolve('uploads'));
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `audio-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
+});
+
+const uploadAudio = multer({
+  storage: audioStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 const router = Router();
 
-// All interview routes require authentication
 router.use(authenticate);
 
-// Interview lifecycle
-router.post('/', validate({ body: startInterviewSchema }), interviewController.startInterviewHandler);
-router.get('/', interviewController.listInterviewsHandler);
-router.get('/:id', validate({ params: interviewIdParamSchema }), interviewController.getInterviewDetailHandler);
-router.get('/:id/result', validate({ params: interviewIdParamSchema }), interviewController.getInterviewResultHandler);
+router.post(
+  '/sessions',
+  validate({ body: createSessionSchema }),
+  interviewController.createSessionHandler,
+);
 
-// Session management
-router.post('/:id/sessions/:sessionId/start', validate({ params: sessionParamSchema }), interviewController.startSessionHandler);
-router.post('/:id/sessions/:sessionId/submit', validate({ params: sessionParamSchema, body: submitSessionSchema }), interviewController.submitSessionHandler);
+router.get(
+  '/sessions/:sessionId',
+  validate({ params: sessionIdParamSchema }),
+  interviewController.getSessionDetailHandler,
+);
+
+router.post(
+  '/sessions/:sessionId/voice-answer',
+  validate({ params: sessionIdParamSchema }),
+  uploadAudio.single('audioFile'),
+  interviewController.submitVoiceAnswerHandler,
+);
+
+router.patch(
+  '/sessions/:sessionId/cancel',
+  validate({ params: sessionIdParamSchema }),
+  interviewController.cancelSessionHandler,
+);
+
+router.get(
+  '/sessions/:sessionId/result',
+  validate({ params: sessionIdParamSchema }),
+  interviewController.getResultHandler,
+);
+
+router.get(
+  '/history',
+  interviewController.getHistoryHandler,
+);
 
 export default router;

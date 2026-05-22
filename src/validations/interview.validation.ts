@@ -1,53 +1,40 @@
 import Joi from 'joi';
 
-export const startInterviewSchema = Joi.object({
-  jobRoleId: Joi.string().required().messages({
-    'string.empty': 'Job Role ID is required',
-    'any.required': 'Job Role ID is required',
+export const createSessionSchema = Joi.object({
+  profileId: Joi.string().required().messages({
+    'string.empty': 'Profile ID is required',
+    'any.required': 'Profile ID is required',
+  }),
+  roleId: Joi.string().required().messages({
+    'string.empty': 'Role ID is required',
+    'any.required': 'Role ID is required',
+  }),
+  totalMainQuestions: Joi.number().integer().min(1).max(10).default(5).messages({
+    'number.min': 'Must have at least 1 question',
+    'number.max': 'Cannot exceed 10 questions',
   }),
 });
 
-export const interviewIdParamSchema = Joi.object({
-  id: Joi.string().required().messages({
-    'string.empty': 'Interview ID is required',
-    'any.required': 'Interview ID is required',
-  }),
-});
-
-export const sessionParamSchema = Joi.object({
-  id: Joi.string().required().messages({
-    'string.empty': 'Interview ID is required',
-    'any.required': 'Interview ID is required',
-  }),
+export const sessionIdParamSchema = Joi.object({
   sessionId: Joi.string().required().messages({
     'string.empty': 'Session ID is required',
     'any.required': 'Session ID is required',
   }),
 });
 
-export const submitSessionSchema = Joi.object({
-  transcript: Joi.array().items(
-    Joi.object({
-      role: Joi.string().valid('ai', 'user').required(),
-      content: Joi.string().required(),
-      timestamp: Joi.string().optional(),
-    })
-  ).required().messages({
-    'array.base': 'Transcript must be an array',
-    'any.required': 'Transcript is required',
+export const voiceAnswerFieldsSchema = Joi.object({
+  questionId: Joi.string().required().messages({
+    'string.empty': 'Question ID is required',
+    'any.required': 'Question ID is required',
   }),
 });
 
-export interface StartInterviewInput {
-  jobRoleId: string;
+export interface CreateSessionInput {
+  profileId: string;
+  roleId: string;
+  totalMainQuestions?: number;
 }
 
-export interface TranscriptEntry {
-  role: 'ai' | 'user';
-  content: string;
-  timestamp?: string;
-}
-
-export interface SubmitSessionInput {
-  transcript: TranscriptEntry[];
+export interface VoiceAnswerFields {
+  questionId: string;
 }

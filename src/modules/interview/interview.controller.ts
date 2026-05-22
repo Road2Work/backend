@@ -3,92 +3,134 @@ import catchAsync from '../../utils/catchAsync.ts';
 import response from '../../utils/response.ts';
 import ApiError from '../../utils/ApiError.ts';
 import {
-  startInterview,
-  getUserInterviews,
-  getInterviewDetail,
-  startSession,
-  submitSession,
-  getInterviewResult,
+  createSession,
+  getSessionDetail,
+  submitVoiceAnswer,
+  cancelSession,
+  getSessionResult,
+  getInterviewHistory,
 } from './interview.service.ts';
 
-export const startInterviewHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+export const createSessionHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.user?.id as string;
-  const { jobRoleId } = req.body;
+  const result = await createSession(userId, req.body);
 
-  const result = await startInterview(userId, jobRoleId);
-
-  if (!result) {
-    return next(ApiError.notFound('Job role not found or has no interview stages'));
+  if ('error' in result) {
+    const statusMap: Record<string, number> = {
+      PROFILE_NOT_FOUND: 404,
+      ROLE_NOT_FOUND: 404,
+      INTERVIEW_CONTEXT_REQUIRED: 400,
+    };
+    const status = statusMap[result.error] || 400;
+    return next(new ApiError(result.message, status, result.error));
   }
 
-  return response(res, 201, 'Interview started successfully', result);
+  return response(res, 201, 'Interview session created successfully', result);
 });
 
-export const listInterviewsHandler = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
+export const getSessionDetailHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.user?.id as string;
-  const interviews = await getUserInterviews(userId);
-  return response(res, 200, 'Interviews fetched successfully', interviews);
-});
-
-export const getInterviewDetailHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.user?.id as string;
-  const id = req.params.id as string;
-
-  const interview = await getInterviewDetail(id, userId);
-
-  if (!interview) {
-    return next(ApiError.notFound('Interview not found'));
-  }
-
-  return response(res, 200, 'Interview detail fetched successfully', interview);
-});
-
-export const startSessionHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.user?.id as string;
-  const id = req.params.id as string;
   const sessionId = req.params.sessionId as string;
 
-  const result = await startSession(id, sessionId, userId);
+  const result = await getSessionDetail(sessionId, userId);
 
   if (!result) {
-    return next(ApiError.notFound('Interview or session not found'));
+    return next(ApiError.notFound('Interview session not found', 'INTERVIEW_SESSION_NOT_FOUND'));
+  }
+
+  return response(res, 200, 'Interview session fetched successfully', result);
+});
+
+export const submitVoiceAnswerHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user?.id as string;
+  const sessionId = req.params.sessionId as string;
+  const { questionId } = req.body;
+
+  if (!questionId) {
+    return next(ApiError.badRequest('Question ID is required'));
+  }
+
+  if (!req.file) {
+    return next(ApiError.badRequest('Audio file is required', 'AUDIO_INVALID_FORMAT'));
+  }
+
+  const allowedMimes = [
+    'audio/webm', 'audio/wav', 'audio/mp3', 'audio/mpeg',
+    'audio/m4a', 'audio/x-m4a', 'audio/mp4', 'audio/ogg',
+  ];
+  if (!allowedMimes.includes(req.file.mimetype)) {
+    return next(ApiError.badRequest('Invalid audio format. Allowed: webm, wav, mp3, m4a', 'AUDIO_INVALID_FORMAT'));
+  }
+
+  const maxSize = 10 * 1024 * 1024;
+  if (req.file.size > maxSize) {
+    return next(ApiError.badRequest('Audio file is too large', 'AUDIO_FILE_TOO_LARGE'));
+  }
+
+  const result = await submitVoiceAnswer(
+    sessionId,
+    userId,
+    questionId,
+    req.file.path,
+    req.file.originalname,
+    req.file.mimetype,
+  );
+
+  if ('error' in result) {
+    const statusMap: Record<string, number> = {
+      INTERVIEW_SESSION_NOT_FOUND: 404,
+      INTERVIEW_ALREADY_COMPLETED: 400,
+    };
+    const status = statusMap[result.error] || 400;
+    return next(new ApiError(result.message, status, result.error));
+  }
+
+  const message = result.isCompleted
+    ? 'Interview completed successfully'
+    : result.nextQuestion?.questionType === 'clarification'
+      ? 'Answer evaluated. Clarification needed.'
+      : 'Answer evaluated successfully';
+
+  return response(res, 200, message, result);
+});
+
+export const cancelSessionHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user?.id as string;
+  const sessionId = req.params.sessionId as string;
+
+  const result = await cancelSession(sessionId, userId);
+
+  if (!result) {
+    return next(ApiError.notFound('Interview session not found', 'INTERVIEW_SESSION_NOT_FOUND'));
   }
 
   if ('error' in result) {
-    return next(ApiError.badRequest(result.error));
+    return next(ApiError.badRequest(result.message, result.error));
   }
 
-  return response(res, 200, 'Session started successfully', result);
+  return response(res, 200, 'Interview session cancelled successfully', result);
 });
 
-export const submitSessionHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+export const getResultHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.user?.id as string;
-  const id = req.params.id as string;
   const sessionId = req.params.sessionId as string;
-  const { transcript } = req.body;
 
-  const result = await submitSession(id, sessionId, userId, transcript);
+  const result = await getSessionResult(sessionId, userId);
 
-  if (!result) {
-    return next(ApiError.notFound('Interview or session not found'));
-  }
-
-  // if ('error' in result) {
-  //   return next(ApiError.badRequest(result.error));
-  // }
-
-  return response(res, 200, 'Session submitted and evaluated successfully', result);
-});
-
-export const getInterviewResultHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.user?.id as string;
-  const id = req.params.id as string;
-
-  const result = await getInterviewResult(id, userId);
-
-  if (!result) {
-    return next(ApiError.notFound('Interview not found'));
+  if ('error' in result) {
+    const statusMap: Record<string, number> = {
+      INTERVIEW_SESSION_NOT_FOUND: 404,
+      RESULT_NOT_FOUND: 404,
+    };
+    const status = statusMap[result.error] || 404;
+    return next(new ApiError(result.message, status, result.error));
   }
 
   return response(res, 200, 'Interview result fetched successfully', result);
+});
+
+export const getHistoryHandler = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
+  const userId = req.user?.id as string;
+  const result = await getInterviewHistory(userId);
+  return response(res, 200, 'Interview history fetched successfully', result);
 });

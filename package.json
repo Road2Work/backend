@@ -5,15 +5,15 @@
   "main": "src/server.ts",
   "type": "module",
   "scripts": {
-    "start:dev": "nodemon --exec ts-node --esm src/server.ts",
-    "start:prod": "NODE_ENV=production ts-node --esm src/server.ts",
+    "start:dev": "tsx watch src/server.ts",
+    "start:prod": "NODE_ENV=production tsx src/server.ts",
     "migrate": "node-pg-migrate",
     "type-check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "ts-node --esm src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts"
   },
   "keywords": [],
   "author": "",

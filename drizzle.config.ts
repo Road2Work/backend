@@ -11,8 +11,6 @@ export default defineConfig({
     database: env.PGDATABASE!,
     user: env.PGUSER!,
     password: env.PGPASSWORD || '',
-    ssl: {
-      rejectUnauthorized: false,
-    },
+    ssl: env.PGSSLMODE !== 'disable' ? { rejectUnauthorized: false } : false,
   },
 });

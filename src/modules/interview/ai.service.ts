@@ -7,8 +7,23 @@ async function mlFetch(path: string, options: RequestInit): Promise<any> {
   try {
     const res = await fetch(`${ML_BASE}${path}`, options);
     if (!res.ok) {
-      const errorBody = await res.text().catch(() => 'Unknown ML error');
-      console.error(`[AI Service] ${path} returned ${res.status}: ${errorBody}`);
+      let errorMessage = 'Unknown ML error';
+      let errorCode = 'ML_SERVICE_ERROR';
+
+      try {
+        const errorJson = await res.json();
+        errorMessage = errorJson.detail || errorJson.message || errorMessage;
+        errorCode = errorJson.code || errorCode;
+      } catch {
+        errorMessage = await res.text().catch(() => errorMessage);
+      }
+
+      console.error(`[AI Service] ${path} returned ${res.status}: ${errorMessage}`);
+
+      if (res.status >= 400 && res.status < 500) {
+        throw new ApiError(errorMessage, res.status, errorCode);
+      }
+
       throw ApiError.serviceUnavailable(
         'AI service is currently unavailable. Please try again.',
         'AI_SERVICE_UNAVAILABLE',
@@ -25,6 +40,15 @@ async function mlFetch(path: string, options: RequestInit): Promise<any> {
   }
 }
 
+export interface RecordingPolicy {
+  autoStartMic: boolean;
+  autoStartTrigger: string;
+  answerLimitSeconds: number;
+  silenceAutoStopEnabled: boolean;
+  userCanStopBeforeLimit: boolean;
+  stopReasons: string[];
+  audioFormat: string;
+}
 
 export interface SttResult {
   status: string;
@@ -33,6 +57,7 @@ export interface SttResult {
   duration_seconds: number;
   needs_clarification: boolean;
   clarification_type?: string;
+  recording_policy?: RecordingPolicy;
 }
 
 export interface EvaluateAnswerResult {
@@ -61,7 +86,10 @@ export interface ClarifyingQuestionResult {
   question_text: string;
   question_type: 'clarification';
   clarification_type: string;
+  competency_target: string;
+  generated_from: string;
   hrd_state: 'clarifying';
+  recording_policy?: RecordingPolicy;
 }
 
 export interface NextQuestionResult {
@@ -70,7 +98,11 @@ export interface NextQuestionResult {
   parent_question_id: null;
   competency_target: string;
   clarification_type: null;
+  generated_from: string;
+  repeated_from_question_id?: string | null;
   hrd_state: 'asking';
+  practice_mode?: string;
+  recording_policy?: RecordingPolicy;
 }
 
 export interface GenerateResultResponse {
@@ -123,6 +155,34 @@ export interface ExtractProfileResult {
   initial_evidence_score: number;
 }
 
+export interface AdaptivePracticeMemory {
+  enabled: boolean;
+  previous_session_ids: string[];
+  previous_interview_summary?: string | null;
+  previous_score_breakdown?: Record<string, number> | null;
+  previous_detected_weaknesses: string[];
+  previous_evidence_levels: number[];
+  asked_question_history: Array<{
+    question_id: string;
+    question_text: string;
+    question_type: string;
+    competency_target: string;
+    asked_at?: string;
+  }>;
+  latest_interview_feedback?: string | null;
+  next_best_actions: Array<{
+    id: string;
+    title: string;
+    description: string;
+    impact_label: string;
+    action_type: string;
+  }>;
+  improvement_focus: string[];
+  avoid_repeated_questions: boolean;
+  retry_mode: boolean;
+}
+
+
 export async function extractCvContext(
   cvBuffer: Buffer,
   filename: string,
@@ -135,7 +195,7 @@ export async function extractCvContext(
   formData.append('targetRoleId', targetRoleId);
   formData.append('targetRoleName', targetRoleName);
 
-  return mlFetch('/v1/context/extract-cv', {
+  return mlFetch('/v1/profile/extract-cv', {
     method: 'POST',
     body: formData,
   });
@@ -149,12 +209,13 @@ export async function extractShortProfileContext(payload: {
   project_experience?: string;
   achievement_or_impact?: string;
 }): Promise<ExtractProfileResult> {
-  return mlFetch('/v1/context/extract-profile', {
+  return mlFetch('/v1/profile/extract-manual', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 }
+
 
 export async function transcribeAudio(
   audioBuffer: Buffer,
@@ -172,6 +233,7 @@ export async function transcribeAudio(
   });
 }
 
+
 export async function evaluateAnswer(payload: {
   session_id: string;
   question: {
@@ -184,18 +246,21 @@ export async function evaluateAnswer(payload: {
     transcript_text: string;
     stt_confidence: number;
   };
-  target_role: {
-    id: string;
-    role_name: string;
+  selected_role: {
+    id?: string;
+    name: string;
   };
-  interview_context: {
+  profile?: {
     skills: string[];
     tools: string[];
     experience_summary: string;
     evidence_items: string[];
   };
-  score_history: any[];
-  clarification_count: number;
+  session_state?: {
+    clarification_count: number;
+    max_clarification?: number;
+  };
+  score_history?: any[];
 }): Promise<EvaluateAnswerResult> {
   return mlFetch('/v1/interview/evaluate-answer', {
     method: 'POST',
@@ -205,14 +270,13 @@ export async function evaluateAnswer(payload: {
 }
 
 export async function generateClarifyingQuestion(payload: {
-  target_role: string;
   question_text: string;
   answer_text: string;
   detected_weaknesses: string[];
-  clarification_type: string;
-  clarification_goal: string;
+  clarification_type?: string;
+  selected_role?: { id?: string; name: string };
 }): Promise<ClarifyingQuestionResult> {
-  return mlFetch('/v1/interview/clarifying-question', {
+  return mlFetch('/v1/interview/generate-clarification', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -221,10 +285,10 @@ export async function generateClarifyingQuestion(payload: {
 
 export async function generateNextQuestion(payload: {
   session_id: string;
-  target_role: {
-    id: string;
-    role_name: string;
-    role_family: string;
+  selected_role: {
+    id?: string;
+    name: string;
+    role_family?: string;
   };
   interview_context: {
     skills: string[];
@@ -239,10 +303,12 @@ export async function generateNextQuestion(payload: {
     clarification_count: number;
     detected_weaknesses: string[];
   };
-  question_seed: any[];
-  competency_map: any[];
+  adaptive_practice_memory?: AdaptivePracticeMemory | null;
+  practice_mode?: string;
+  question_seed?: any[];
+  competency_map?: any[];
 }): Promise<NextQuestionResult> {
-  return mlFetch('/v1/interview/next-question', {
+  return mlFetch('/v1/interview/generate-question', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -251,10 +317,11 @@ export async function generateNextQuestion(payload: {
 
 export async function generateFinalResult(payload: {
   session_id: string;
-  target_role: string;
+  selected_role: { id?: string; name: string };
   answers: Array<{
     question_text: string;
     answer_text: string;
+    answer_score?: number;
     score_breakdown: {
       role_relevance: number;
       star_structure: number;
@@ -265,6 +332,8 @@ export async function generateFinalResult(payload: {
     };
     evidence_level: number;
     detected_weaknesses: string[];
+    feedback?: string;
+    stronger_answer?: string;
   }>;
 }): Promise<GenerateResultResponse> {
   return mlFetch('/v1/interview/generate-result', {

@@ -13,6 +13,13 @@ export const createSessionSchema = Joi.object({
     'number.min': 'Must have at least 1 question',
     'number.max': 'Cannot exceed 10 questions',
   }),
+  practiceMode: Joi.string()
+    .valid('first_session', 'adaptive_from_history', 'retry_focus')
+    .default('first_session'),
+  retryMode: Joi.boolean().default(false),
+  avoidRepeatedQuestions: Joi.boolean().default(true),
+  improvementFocus: Joi.array().items(Joi.string()).default([]),
+  requestedCompetencies: Joi.array().items(Joi.string()).default([]),
 });
 
 export const sessionIdParamSchema = Joi.object({
@@ -33,8 +40,14 @@ export interface CreateSessionInput {
   profileId: string;
   roleId: string;
   totalMainQuestions?: number;
+  practiceMode?: 'first_session' | 'adaptive_from_history' | 'retry_focus';
+  retryMode?: boolean;
+  avoidRepeatedQuestions?: boolean;
+  improvementFocus?: string[];
+  requestedCompetencies?: string[];
 }
 
 export interface VoiceAnswerFields {
   questionId: string;
 }
+

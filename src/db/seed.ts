@@ -5,21 +5,10 @@ import { db } from './index.ts';
 import { jobRoles } from './schema/job_roles.ts';
 import { roleSkills } from './schema/role_skills.ts';
 
-/**
- * Seed script for Road2Work.id.
- * Populates job_roles and role_skills with initial data matching the API Contract.
- *
- * Run with: npm run db:seed
- */
 const seed = async () => {
-  console.log('🌱 Seeding database...\n');
+  console.log('Seeding database...\n');
 
   try {
-    // ==========================================
-    // Role Family: Data & AI
-    // ==========================================
-
-    // Data Analyst
     const daId = 'role_data_analyst';
     await db.insert(jobRoles).values({
       id: daId,
@@ -47,9 +36,8 @@ const seed = async () => {
         ...skill,
       }).onConflictDoNothing();
     }
-    console.log(`✅ Data Analyst — ${daSkills.length} skills`);
+    console.log(`Data Analyst — ${daSkills.length} skills`);
 
-    // Data Scientist
     const dsId = 'role_data_scientist';
     await db.insert(jobRoles).values({
       id: dsId,
@@ -76,9 +64,8 @@ const seed = async () => {
         ...skill,
       }).onConflictDoNothing();
     }
-    console.log(`✅ Data Scientist — ${dsSkills.length} skills`);
+    console.log(`Data Scientist — ${dsSkills.length} skills`);
 
-    // AI Engineer
     const aeId = 'role_ai_engineer';
     await db.insert(jobRoles).values({
       id: aeId,
@@ -104,9 +91,8 @@ const seed = async () => {
         ...skill,
       }).onConflictDoNothing();
     }
-    console.log(`✅ AI Engineer — ${aeSkills.length} skills`);
+    console.log(`AI Engineer — ${aeSkills.length} skills`);
 
-    // ML Engineer
     const mleId = 'role_ml_engineer';
     await db.insert(jobRoles).values({
       id: mleId,
@@ -132,11 +118,7 @@ const seed = async () => {
         ...skill,
       }).onConflictDoNothing();
     }
-    console.log(`✅ ML Engineer — ${mleSkills.length} skills`);
-
-    // ==========================================
-    // Role Family: Software Engineering
-    // ==========================================
+    console.log(`ML Engineer — ${mleSkills.length} skills`);
 
     const beId = 'role_backend_developer';
     await db.insert(jobRoles).values({
@@ -164,7 +146,7 @@ const seed = async () => {
         ...skill,
       }).onConflictDoNothing();
     }
-    console.log(`✅ Backend Developer — ${beSkills.length} skills`);
+    console.log(`Backend Developer — ${beSkills.length} skills`);
 
     const feId = 'role_frontend_developer';
     await db.insert(jobRoles).values({
@@ -191,11 +173,7 @@ const seed = async () => {
         ...skill,
       }).onConflictDoNothing();
     }
-    console.log(`✅ Frontend Developer — ${feSkills.length} skills`);
-
-    // ==========================================
-    // Role Family: Product & Design
-    // ==========================================
+    console.log(`Frontend Developer — ${feSkills.length} skills`);
 
     const pmId = 'role_product_manager';
     await db.insert(jobRoles).values({
@@ -222,7 +200,7 @@ const seed = async () => {
         ...skill,
       }).onConflictDoNothing();
     }
-    console.log(`✅ Product Manager — ${pmSkills.length} skills`);
+    console.log(`Product Manager — ${pmSkills.length} skills`);
 
     const uxId = 'role_uiux_designer';
     await db.insert(jobRoles).values({
@@ -249,11 +227,11 @@ const seed = async () => {
         ...skill,
       }).onConflictDoNothing();
     }
-    console.log(`✅ UI/UX Designer — ${uxSkills.length} skills`);
+    console.log(`UI/UX Designer — ${uxSkills.length} skills`);
 
-    console.log('\n🎉 Seeding completed successfully!');
+    console.log('\nSeeding completed successfully!');
   } catch (error) {
-    console.error('❌ Seeding failed:', error);
+    console.error('Seeding failed:', error);
   } finally {
     await pool.end();
     process.exit(0);

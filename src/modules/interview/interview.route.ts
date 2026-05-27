@@ -64,4 +64,14 @@ router.get(
   interviewController.getHistoryHandler,
 );
 
+router.get(
+  '/quota',
+  interviewController.getQuotaHandler,
+);
+
+router.get(
+  '/practice-memory',
+  interviewController.getPracticeMemoryHandler,
+);
+
 export default router;

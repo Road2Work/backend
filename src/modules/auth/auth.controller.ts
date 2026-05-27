@@ -59,6 +59,7 @@ export const loginHandler = catchAsync(async (req: Request, res: Response, next:
       }
       : null,
     accessToken,
+    refreshToken,
   });
 });
 

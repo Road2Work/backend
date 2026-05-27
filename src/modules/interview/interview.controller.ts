@@ -9,17 +9,20 @@ import {
   cancelSession,
   getSessionResult,
   getInterviewHistory,
+  getQuota,
+  getPracticeMemory,
 } from './interview.service.ts';
 
 export const createSessionHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.user?.id as string;
   const result = await createSession(userId, req.body);
 
-  if ('error' in result) {
+  if ('error' in result && result.error) {
     const statusMap: Record<string, number> = {
       PROFILE_NOT_FOUND: 404,
       ROLE_NOT_FOUND: 404,
       INTERVIEW_CONTEXT_REQUIRED: 400,
+      INTERVIEW_QUOTA_EXCEEDED: 403,
     };
     const status = statusMap[result.error] || 400;
     return next(new ApiError(result.message, status, result.error));
@@ -133,4 +136,25 @@ export const getHistoryHandler = catchAsync(async (req: Request, res: Response, 
   const userId = req.user?.id as string;
   const result = await getInterviewHistory(userId);
   return response(res, 200, 'Interview history fetched successfully', result);
+});
+
+export const getQuotaHandler = catchAsync(async (req: Request, res: Response, _next: NextFunction) => {
+  const userId = req.user?.id as string;
+  const result = await getQuota(userId);
+  return response(res, 200, 'Interview quota fetched successfully', result);
+});
+
+export const getPracticeMemoryHandler = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.user?.id as string;
+  const roleId = req.query.roleId as string;
+
+  if (!roleId) return next(ApiError.badRequest('roleId query parameter is required'));
+
+  const result = await getPracticeMemory(userId, roleId);
+
+  if ('error' in result) {
+    return next(new ApiError(result.message, 404, result.error));
+  }
+
+  return response(res, 200, 'Practice memory fetched successfully', result);
 });

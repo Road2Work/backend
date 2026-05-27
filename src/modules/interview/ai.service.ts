@@ -342,3 +342,73 @@ export async function generateFinalResult(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+// ── Role Fit AI ──
+
+export interface RoleFitRankingResult {
+  recommended_roles: Array<{
+    role_id: string;
+    role_name: string;
+    fit_score: number;
+    strengths: string[];
+    gaps: string[];
+  }>;
+}
+
+export interface RoleFitScoreResult {
+  role_fit_score: number;
+  strengths: string[];
+  gaps: string[];
+  skill_overlap: number;
+}
+
+export async function generateRoleFitRanking(payload: {
+  profile: {
+    skills: string[];
+    tools: string[];
+    experience_summary: string;
+    evidence_items: string[];
+  };
+  available_roles: Array<{ id: string; name: string; role_family: string }>;
+  limit?: number;
+}): Promise<RoleFitRankingResult> {
+  return mlFetch('/v1/role-fit/generate-ranking', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function calculateRoleFitScore(payload: {
+  profile: {
+    skills: string[];
+    tools: string[];
+    experience_summary: string;
+    evidence_items: string[];
+  };
+  selected_role: { id: string; name: string; role_family?: string };
+}): Promise<RoleFitScoreResult> {
+  return mlFetch('/v1/role-fit/calculate-score', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Dashboard AI ──
+
+export interface DashboardSummaryResult {
+  career_summary: string;
+}
+
+export async function generateDashboardSummary(payload: {
+  dashboard_data: any;
+  final_score: number;
+}): Promise<DashboardSummaryResult> {
+  return mlFetch('/v1/dashboard/generate-summary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+

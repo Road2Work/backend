@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../../db/index.ts';
 import { profiles } from '../../db/schema/profiles.ts';
@@ -59,18 +59,20 @@ async function buildAdaptiveMemory(
     .where(eq(interviewResults.sessionId, lastSession.id))
     .limit(1);
 
-  const prevQuestions = await db
-    .select({
-      id: interviewQuestions.id,
-      questionText: interviewQuestions.questionText,
-      questionType: interviewQuestions.questionType,
-      competencyTarget: interviewQuestions.competencyTarget,
-      createdAt: interviewQuestions.createdAt,
-    })
-    .from(interviewQuestions)
-    .where(
-      eq(interviewQuestions.sessionId, lastSession.id),
-    );
+  const allPrevQuestions = await Promise.all(
+    previousSessionIds.map((sid) =>
+      db.select({
+        id: interviewQuestions.id,
+        questionText: interviewQuestions.questionText,
+        questionType: interviewQuestions.questionType,
+        competencyTarget: interviewQuestions.competencyTarget,
+        createdAt: interviewQuestions.createdAt,
+      })
+      .from(interviewQuestions)
+      .where(eq(interviewQuestions.sessionId, sid)),
+    ),
+  );
+  const prevQuestions = allPrevQuestions.flat();
 
   const askedQuestionHistory = prevQuestions.map((q) => ({
     question_id: q.id,
@@ -80,10 +82,14 @@ async function buildAdaptiveMemory(
     asked_at: q.createdAt?.toISOString(),
   }));
 
-  const prevAnswers = await db
-    .select({ evidenceLevel: interviewAnswers.evidenceLevel, detectedWeaknesses: interviewAnswers.detectedWeaknesses })
-    .from(interviewAnswers)
-    .where(eq(interviewAnswers.sessionId, lastSession.id));
+  const allPrevAnswers = await Promise.all(
+    previousSessionIds.map((sid) =>
+      db.select({ evidenceLevel: interviewAnswers.evidenceLevel, detectedWeaknesses: interviewAnswers.detectedWeaknesses })
+        .from(interviewAnswers)
+        .where(eq(interviewAnswers.sessionId, sid)),
+    ),
+  );
+  const prevAnswers = allPrevAnswers.flat();
 
   const previousEvidenceLevels = prevAnswers.map((a) => a.evidenceLevel || 1);
   const allWeaknesses = prevAnswers.flatMap((a) => (a.detectedWeaknesses as string[]) || []);
@@ -145,6 +151,16 @@ export const createSession = async (userId: string, input: CreateSessionInput) =
 
   if (!role) {
     return { error: 'ROLE_NOT_FOUND', message: 'Role not found' };
+  }
+
+  const MAX_FREE_QUOTA = 5;
+  const [quotaCheck] = await db
+    .select({ total: count() })
+    .from(interviewSessions)
+    .where(eq(interviewSessions.userId, userId));
+
+  if ((quotaCheck?.total || 0) >= MAX_FREE_QUOTA) {
+    return { error: 'INTERVIEW_QUOTA_EXCEEDED', message: 'Interview quota exceeded. Maximum 5 sessions allowed.' };
   }
 
   const adaptiveMemory = await buildAdaptiveMemory(
@@ -777,3 +793,84 @@ export const getInterviewHistory = async (userId: string) => {
 
   return { history };
 };
+
+const MAX_FREE_QUOTA = 5;
+
+export const getQuota = async (userId: string) => {
+  const [result] = await db
+    .select({ total: count() })
+    .from(interviewSessions)
+    .where(eq(interviewSessions.userId, userId));
+
+  const used = result?.total || 0;
+  const remaining = Math.max(0, MAX_FREE_QUOTA - used);
+
+  return {
+    quota: {
+      total: MAX_FREE_QUOTA,
+      used,
+      remaining,
+      isExceeded: remaining <= 0,
+    },
+  };
+};
+
+export const getPracticeMemory = async (userId: string, roleId: string) => {
+  const sessions = await db
+    .select()
+    .from(interviewSessions)
+    .where(
+      and(
+        eq(interviewSessions.userId, userId),
+        eq(interviewSessions.roleId, roleId),
+        eq(interviewSessions.status, 'completed'),
+      ),
+    )
+    .orderBy(desc(interviewSessions.createdAt))
+    .limit(5);
+
+  if (sessions.length === 0) {
+    return { error: 'PRACTICE_MEMORY_NOT_FOUND', message: 'No previous completed sessions found for this role' };
+  }
+
+  const lastSession = sessions[0];
+  const [lastResult] = await db
+    .select()
+    .from(interviewResults)
+    .where(eq(interviewResults.sessionId, lastSession.id))
+    .limit(1);
+
+  const prevAnswers = await db
+    .select({ detectedWeaknesses: interviewAnswers.detectedWeaknesses })
+    .from(interviewAnswers)
+    .where(eq(interviewAnswers.sessionId, lastSession.id));
+
+  const allWeaknesses = prevAnswers.flatMap((a) => (a.detectedWeaknesses as string[]) || []);
+
+  const prevQuestions = await db
+    .select({
+      questionText: interviewQuestions.questionText,
+      questionType: interviewQuestions.questionType,
+      competencyTarget: interviewQuestions.competencyTarget,
+    })
+    .from(interviewQuestions)
+    .where(eq(interviewQuestions.sessionId, lastSession.id));
+
+  return {
+    practiceMemory: {
+      previousSessionIds: sessions.map((s) => s.id),
+      previousInterviewSummary: lastResult
+        ? `Score: ${lastResult.finalScore}, Status: ${lastResult.readinessStatus}`
+        : null,
+      previousScoreBreakdown: lastResult?.scoreBreakdown || null,
+      previousDetectedWeaknesses: [...new Set(allWeaknesses)],
+      askedQuestionHistory: prevQuestions.map((q) => ({
+        questionText: q.questionText,
+        questionType: q.questionType,
+        competencyTarget: q.competencyTarget,
+      })),
+      nextPracticeRecommendation: lastResult?.nextPracticeRecommendation || null,
+    },
+  };
+};
+

@@ -5,6 +5,7 @@
   "main": "src/server.ts",
   "type": "module",
   "scripts": {
+    "start": "npm run db:push && npm run start:prod",
     "start:dev": "nodemon --exec ts-node --esm src/server.ts",
     "start:prod": "NODE_ENV=production ts-node --esm src/server.ts",
     "migrate": "node-pg-migrate",
